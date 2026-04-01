@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Pytest
+.pytest_cache/
+.coverage
+
+# Root-level report (use reports/ folder instead)
+report.html
