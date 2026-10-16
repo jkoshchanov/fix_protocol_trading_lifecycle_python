@@ -17,11 +17,13 @@ Feature: Full Trading Order Lifecycle
     Then the order status should be PartiallyFilled
     And the CumQty should be 40
     And the LeavesQty should be 60
+    And the average price should be 149.95
 
     When the order is fully filled with remaining qty 60 at price 150.00
     Then the order status should be Filled
     And the CumQty should be 100
     And the LeavesQty should be 0
+    And the average price should be 149.98
 
   Scenario: Place order then cancel before fill
     Given a limit buy order for "AAPL" with quantity 100 and price 150.00

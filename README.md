@@ -1,12 +1,14 @@
 # FIX Protocol Trading Lifecycle — Python
 
+[![Tests](https://github.com/jkoshchanov/fix_protocol_trading_lifecycle_python/actions/workflows/tests.yml/badge.svg)](https://github.com/jkoshchanov/fix_protocol_trading_lifecycle_python/actions/workflows/tests.yml)
+
 An SDET-focused test automation project that validates trading orders using the **FIX 4.2 protocol**. Built with [`simplefix`](https://github.com/da4089/simplefix) (free, open-source) and `pytest`.
 
 ---
 
 ## What This Project Covers
 
-Full trading order lifecycle validation:
+Full trading order lifecycle validation, including quantity bookkeeping (CumQty + LeavesQty = OrderQty) and the volume-weighted average fill price (AvgPx):
 
 | Step | FIX Message | MsgType |
 |------|-------------|---------|
@@ -16,7 +18,6 @@ Full trading order lifecycle validation:
 | Full fill | ExecutionReport (Fill) | `35=8` |
 | Cancel order | OrderCancelRequest | `35=F` |
 | Modify order | OrderCancelReplaceRequest | `35=G` |
-| Query status | OrderStatusRequest | `35=H` |
 | Cancel rejected | OrderCancelReject | `35=9` |
 
 ---
@@ -98,8 +99,10 @@ pytest tests/ -v --no-header -rN
 
 | Tag | Name | Description |
 |-----|------|-------------|
+| 6 | AvgPx | Average price of all fills (quantity-weighted) |
 | 8 | BeginString | Protocol version (`FIX.4.2`) |
 | 11 | ClOrdID | Client-assigned order ID |
+| 14 | CumQty | Total quantity filled so far |
 | 35 | MsgType | Message type identifier |
 | 37 | OrderID | Broker-assigned order ID |
 | 38 | OrderQty | Order quantity |
@@ -111,6 +114,12 @@ pytest tests/ -v --no-header -rN
 | 55 | Symbol | Instrument ticker |
 | 150 | ExecType | Execution type |
 | 151 | LeavesQty | Remaining open quantity |
+
+---
+
+## Continuous Integration
+
+GitHub Actions runs the full suite on every push and pull request to `main` (`.github/workflows/tests.yml`) and saves the HTML report as a downloadable artifact.
 
 ---
 

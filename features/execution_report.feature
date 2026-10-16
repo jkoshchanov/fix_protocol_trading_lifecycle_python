@@ -31,6 +31,7 @@ Feature: Execution Report (35=8)
     And the CumQty should be 100
     And the LeavesQty should be 0
     And the fill quantities should balance for total order qty 100
+    And the average price should be 149.98
 
   Scenario: Order is rejected by broker
     Given an execution report for order "ORD-005" with status Rejected and text "Risk limit exceeded"

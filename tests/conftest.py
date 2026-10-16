@@ -22,12 +22,28 @@ def context():
     return {}
 
 
+def _record_fill(context, qty, price):
+    """Add a fill to the order in context and return (cum_qty, leaves_qty, avg_px).
+
+    AvgPx is the quantity-weighted average of all fills so far, as FIX requires,
+    not the price of the latest fill.
+    """
+    fills = context.setdefault("fills", [])
+    fills.append((qty, price))
+    cum_qty = sum(q for q, _ in fills)
+    avg_px = sum(q * p for q, p in fills) / cum_qty
+    leaves_qty = context.get("order_qty", 100) - cum_qty
+    return cum_qty, leaves_qty, avg_px
+
+
 # ==========================================================================
 # Given steps
 # ==========================================================================
 
 @given(parsers.parse('a limit buy order for "{symbol}" with quantity {qty:d} and price {price:f}'))
 def limit_buy_order(context, symbol, qty, price):
+    context["order_qty"] = qty
+    context["fills"] = []
     context["msg"] = build_new_order_single(
         cl_ord_id="ORD-001",
         symbol=symbol,
@@ -95,7 +111,7 @@ def exec_report_filled(context, cl_ord_id):
         side=Side.Buy,
         leaves_qty=0,
         cum_qty=100,
-        avg_px=149.97,
+        avg_px=149.98,  # 40 @ 149.95 + 60 @ 150.00, weighted average
         last_qty=60,
         last_px=150.00,
     )
@@ -206,6 +222,7 @@ def broker_ack(context):
 
 @when(parsers.parse("the order is partially filled with qty {qty:d} at price {price:f}"))
 def partial_fill(context, qty, price):
+    cum_qty, leaves_qty, avg_px = _record_fill(context, qty, price)
     context["msg"] = build_execution_report(
         order_id="BRKR-001",
         cl_ord_id="ORD-001",
@@ -214,9 +231,9 @@ def partial_fill(context, qty, price):
         ord_status=OrdStatus.PartiallyFilled,
         symbol="AAPL",
         side=Side.Buy,
-        leaves_qty=100 - qty,
-        cum_qty=qty,
-        avg_px=price,
+        leaves_qty=leaves_qty,
+        cum_qty=cum_qty,
+        avg_px=avg_px,
         last_qty=qty,
         last_px=price,
     )
@@ -224,6 +241,7 @@ def partial_fill(context, qty, price):
 
 @when(parsers.parse("the order is fully filled with remaining qty {qty:d} at price {price:f}"))
 def full_fill(context, qty, price):
+    cum_qty, leaves_qty, avg_px = _record_fill(context, qty, price)
     context["msg"] = build_execution_report(
         order_id="BRKR-001",
         cl_ord_id="ORD-001",
@@ -232,9 +250,9 @@ def full_fill(context, qty, price):
         ord_status=OrdStatus.Filled,
         symbol="AAPL",
         side=Side.Buy,
-        leaves_qty=0,
-        cum_qty=100,
-        avg_px=price,
+        leaves_qty=leaves_qty,
+        cum_qty=cum_qty,
+        avg_px=avg_px,
         last_qty=qty,
         last_px=price,
     )
@@ -412,6 +430,11 @@ def check_leaves_qty(context, qty):
 @then(parsers.parse("the CumQty should be {qty:d}"))
 def check_cum_qty(context, qty):
     assert_numeric_equals(context["msg"], Tag.CumQty, qty, "CumQty")
+
+
+@then(parsers.parse("the average price should be {price:f}"))
+def check_avg_px(context, price):
+    assert_numeric_equals(context["msg"], Tag.AvgPx, price, "AvgPx")
 
 
 @then(parsers.parse("the fill quantities should balance for total order qty {total:d}"))
